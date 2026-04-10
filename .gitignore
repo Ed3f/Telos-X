@@ -1,0 +1,9 @@
+# Escludi __pycache__
+__pycache__/
+**/__pycache__/
+
+# Escludi file specifico
+not_active_group.txt
+
+# Escludi py.typed
+py.typed
