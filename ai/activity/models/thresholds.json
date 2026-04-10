@@ -1,0 +1,9 @@
+{
+  "attack_claim": 0.5,
+  "attack_coordination": 0.5,
+  "community_support": 0.5,
+  "marketplace_services": 0.5,
+  "propaganda": 0.5,
+  "target_listing": 0.5,
+  "tool_sharing": 0.5
+}

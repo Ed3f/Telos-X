@@ -27,7 +27,8 @@ from TEx.core.media_handler import UniversalTelegramMediaHandler
 from TEx.database.telegram_group_database import TelegramGroupDatabaseManager, TelegramMessageDatabaseManager
 from TEx.models.database.telegram_db_model import TelegramGroupOrmEntity
 
-
+import json
+from ai import TelosXAIAnalysis
 
 logger = logging.getLogger('TelegramExplorer')
 
@@ -40,6 +41,7 @@ class TelegramGroupMessageScrapper(BaseModule):
         self.media_handler: UniversalTelegramMediaHandler = UniversalTelegramMediaHandler()
         self.finder: FinderEngine = FinderEngine()
         self.notifier: NotifierEngine = NotifierEngine()
+        self.ai_analysis: TelosXAIAnalysis = TelosXAIAnalysis()
 
     async def can_activate(self, config: ConfigParser, args: Dict, data: Dict) -> bool:
         """
@@ -145,6 +147,29 @@ class TelegramGroupMessageScrapper(BaseModule):
                     }
                 
                 rule_id= None
+
+                ai_result = {
+                    "activity": {
+                        "labels": [],
+                        "scores": {},
+                        "top_label": None,
+                        "top_score": 0.0,
+                    },
+                    "attack_type": {
+                        "labels": [],
+                        "scores": {},
+                        "top_label": None,
+                        "top_score": 0.0,
+                    },
+                    "target_nation": {
+                        "labels": [],
+                        "scores": {},
+                        "top_label": None,
+                        "top_score": 0.0,
+                    },
+                }
+
+
                 if message.message:
                     try: 
                         translation= await Translation_function.translate(message=message.message,client= client)
@@ -154,6 +179,19 @@ class TelegramGroupMessageScrapper(BaseModule):
                             logger.info(f"[!] Too many requests wating {e.seconds+1}")
                             sleep(e.seconds+1)
                             translation= await Translation_function.translate(message= values['message'],client= client)
+
+                    text_for_ai = translation
+
+                    try:
+                        ai_result = self.ai_analysis.analyze_message(text_for_ai)
+                        logger.info(
+                            f"[AI] msg={message.id} "
+                            f"activity={ai_result['activity']['top_label']} "
+                            f"attack={ai_result['attack_type']['top_label']} "
+                            f"nation={ai_result['target_nation']['top_label']}"
+                        )
+                    except Exception as e:
+                        logger.error(f"[AI ERROR] message_id={message.id} error={e}")
 
                     #Send messages to the finder to search for any occurrences with the regexes 
                     await self.finder.run(message= message, translation= translation, group_id = values['group_id'], id= values['id'])

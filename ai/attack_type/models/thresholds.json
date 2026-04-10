@@ -1,0 +1,6 @@
+{
+  "data_leak": 0.5,
+  "ddos": 0.5,
+  "malware": 0.5,
+  "website_defacement": 0.5
+}
