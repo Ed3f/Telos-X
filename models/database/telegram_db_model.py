@@ -2,7 +2,7 @@
 
 import datetime
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, Integer, String
+from sqlalchemy import Boolean, DateTime, Integer, String, Float, ForeignKeyConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -122,4 +122,39 @@ class TelegramProfilePicOrmEntity(TelegramDataBaseDeclarativeBase):
     photo_name: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     id : Mapped[int] = mapped_column(Integer, nullable=False)
     date_photo:Mapped[datetime.datetime]= mapped_column(DateTime)
-    
+
+class TelegramMessageAIAnalysisOrmEntity(TelegramDataBaseDeclarativeBase):
+    """Telegram Message AI Analysis ORM Model."""
+
+    __bind_key__ = 'data'
+    __tablename__ = 'telegram_message_ai_analysis'
+
+    # PK autonoma della tabella AI
+    ai_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # FK logica verso telegram_message (che nel tuo schema ha PK composta)
+    message_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    group_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ['message_id', 'group_id'],
+            ['telegram_message.id', 'telegram_message.group_id']
+        ),
+    )
+
+    activity_json: Mapped[Optional[str]] = mapped_column(String(65535), nullable=True)
+    attack_type_json: Mapped[Optional[str]] = mapped_column(String(65535), nullable=True)
+    target_nation_json: Mapped[Optional[str]] = mapped_column(String(65535), nullable=True)
+
+    top_activity: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    top_activity_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    top_attack_type: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    top_attack_type_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    top_target_nation: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    top_target_nation_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    model_version: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime)

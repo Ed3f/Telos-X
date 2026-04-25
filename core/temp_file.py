@@ -6,8 +6,8 @@ from datetime import datetime
 
 import pytz
 
-from TEx.models.database.temp_db_models import TempDataOrmEntity
-from TEx.database.db_manager import DbManager
+from TELOSX.models.database.temp_db_models import TempDataOrmEntity
+from TELOSX.database.db_manager import DbManager
 
 
 class TempFileHandler:

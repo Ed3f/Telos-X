@@ -11,7 +11,7 @@ from typing import Dict, cast
 import pytz
 from telethon import TelegramClient
 
-from TEx.core.base_module import BaseModule
+from TELOSX.core.base_module import BaseModule
 
 logger = logging.getLogger('TelegramExplorer')
 

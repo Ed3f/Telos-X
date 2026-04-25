@@ -8,7 +8,7 @@ from typing import Dict, List
 
 import toml
 
-from TEx.core.base_module import BaseModule
+from TELOSX.core.base_module import BaseModule
 
 logger = logging.getLogger('TelegramExplorer')
 

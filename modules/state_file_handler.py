@@ -5,8 +5,8 @@ import logging
 from configparser import ConfigParser
 from typing import Dict
 
-from TEx.core.base_module import BaseModule
-from TEx.core.state_file import StateFileHandler
+from TELOSX.core.base_module import BaseModule
+from TELOSX.core.state_file import StateFileHandler
 
 logger = logging.getLogger('TelegramExplorer')
 

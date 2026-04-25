@@ -4,6 +4,16 @@ __pycache__/
 
 # Escludi file specifico
 not_active_group.txt
+groups.csv
+
 
 # Escludi py.typed
 py.typed
+
+prova_confing.config
+*.session
+data_local.db
+temp_local.db
+alembic.ini
+example.log
+*.pyc

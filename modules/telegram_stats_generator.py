@@ -9,16 +9,16 @@ from typing import Dict, List, TypedDict, cast
 
 import pytz
 
-from TEx.core.base_module import BaseModule
-from TEx.core.dir_manager import DirectoryManagerUtils
-from TEx.database.telegram_group_database import (
+from TELOSX.core.base_module import BaseModule
+from TELOSX.core.dir_manager import DirectoryManagerUtils
+from TELOSX.database.telegram_group_database import (
     TelegramGroupDatabaseManager,
     TelegramMediaDatabaseManager, TelegramMessageDatabaseManager
     )
-from TEx.models.database.telegram_db_model import (
+from TELOSX.models.database.telegram_db_model import (
     TelegramGroupOrmEntity
     )
-from TEx.models.facade.telegram_group_report_facade_entity import TelegramGroupReportFacadeEntity, \
+from TELOSX.models.facade.telegram_group_report_facade_entity import TelegramGroupReportFacadeEntity, \
     TelegramGroupReportFacadeEntityMapper
 
 logger = logging.getLogger('TelegramExplorer')

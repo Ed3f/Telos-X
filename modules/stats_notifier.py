@@ -5,7 +5,7 @@ import threading
 
 from datetime import datetime
 from datetime import timedelta
-from TEx.core.base_module import BaseModule
+from TELOSX.core.base_module import BaseModule
 from utils import Os_stat, active_groups
     
 class Job(threading.Thread):

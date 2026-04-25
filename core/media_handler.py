@@ -11,19 +11,19 @@ from telethon.tl.types import (Message,
                                MessageMediaPhoto,
                                MessageMediaWebPage)
 
-from TEx.core.media_download_handling.do_nothing_media_downloader import DoNothingMediaDownloader
-from TEx.core.media_download_handling.photo_media_downloader import PhotoMediaDownloader
-from TEx.core.media_download_handling.std_media_downloader import StandardMediaDownloader
-from TEx.core.media_metadata_handling.do_nothing_media_handler import DoNothingHandler
-from TEx.core.media_metadata_handling.generic_binary_handler import GenericBinaryMediaHandler
-from TEx.core.media_metadata_handling.geo_handler import GeoMediaHandler
-from TEx.core.media_metadata_handling.mp4_handler import MediaMp4Handler
-from TEx.core.media_metadata_handling.pdf_handler import PdfMediaHandler
-from TEx.core.media_metadata_handling.photo_handler import PhotoMediaHandler
-from TEx.core.media_metadata_handling.sticker_handler import MediaStickerHandler
-from TEx.core.media_metadata_handling.text_handler import TextPlainHandler
-from TEx.core.media_metadata_handling.webimage_handler import WebImageStickerHandler
-from TEx.database.telegram_group_database import TelegramMediaDatabaseManager
+from TELOSX.core.media_download_handling.do_nothing_media_downloader import DoNothingMediaDownloader
+from TELOSX.core.media_download_handling.photo_media_downloader import PhotoMediaDownloader
+from TELOSX.core.media_download_handling.std_media_downloader import StandardMediaDownloader
+from TELOSX.core.media_metadata_handling.do_nothing_media_handler import DoNothingHandler
+from TELOSX.core.media_metadata_handling.generic_binary_handler import GenericBinaryMediaHandler
+from TELOSX.core.media_metadata_handling.geo_handler import GeoMediaHandler
+from TELOSX.core.media_metadata_handling.mp4_handler import MediaMp4Handler
+from TELOSX.core.media_metadata_handling.pdf_handler import PdfMediaHandler
+from TELOSX.core.media_metadata_handling.photo_handler import PhotoMediaHandler
+from TELOSX.core.media_metadata_handling.sticker_handler import MediaStickerHandler
+from TELOSX.core.media_metadata_handling.text_handler import TextPlainHandler
+from TELOSX.core.media_metadata_handling.webimage_handler import WebImageStickerHandler
+from TELOSX.database.telegram_group_database import TelegramMediaDatabaseManager
 
 
 logger = logging.getLogger('TelegramExplorer')

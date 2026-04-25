@@ -1,5 +1,5 @@
-from TEx.database.telegram_group_database import TelegramMessageDatabaseManager
-from TEx.models.database.telegram_db_model import TelegramMessageOrmEntity
+from TELOSX.database.telegram_group_database import TelegramMessageDatabaseManager
+from TELOSX.models.database.telegram_db_model import TelegramMessageOrmEntity
 from telethon import functions, types
 from typing import Dict, List, cast
 #from . import Notifier
