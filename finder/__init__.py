@@ -1,1 +1,0 @@
-"""TEx Finder Modules."""
