@@ -4,9 +4,9 @@ from typing import Dict, List
 
 from telethon.events import NewMessage
 
-from TEx.finder.regex_finder import RegexFinder
-from TEx.notifier.notifier_engine import NotifierEngine
-from TEx.utils.check_host import check_host
+from TELOSX.finder.regex_finder import RegexFinder
+from TELOSX.notifier.notifier_engine import NotifierEngine
+from TELOSX.utils.check_host import check_host
 
 
 class FinderEngine:

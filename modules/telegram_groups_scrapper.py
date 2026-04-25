@@ -22,14 +22,14 @@ from telethon.tl.functions.messages import GetDialogsRequest
 from telethon.tl.types import ChatPhoto, InputPeerEmpty
 from telethon.tl.types.messages import Dialogs
 from telethon.tl.functions.channels import JoinChannelRequest
-from TEx.models.database.telegram_db_model import TelegramGroupOrmEntity
+from TELOSX.models.database.telegram_db_model import TelegramGroupOrmEntity
 from telethon.errors import ChannelPrivateError, InviteRequestSentError
 
-from TEx.core.base_module import BaseModule
-from TEx.core.mapper.telethon_channel_mapper import TelethonChannelEntityMapper
-from TEx.core.temp_file import TempFileHandler
-from TEx.database.telegram_group_database import TelegramGroupDatabaseManager, TelegramUserDatabaseManager, TelegramProfilePicDatabaseManager
-from TEx.core.mapper.telethon_user_mapper import TelethonUserEntiyMapper
+from TELOSX.core.base_module import BaseModule
+from TELOSX.core.mapper.telethon_channel_mapper import TelethonChannelEntityMapper
+from TELOSX.core.temp_file import TempFileHandler
+from TELOSX.database.telegram_group_database import TelegramGroupDatabaseManager, TelegramUserDatabaseManager, TelegramProfilePicDatabaseManager
+from TELOSX.core.mapper.telethon_user_mapper import TelethonUserEntiyMapper
 
 logger = logging.getLogger('TelegramExplorer')
 

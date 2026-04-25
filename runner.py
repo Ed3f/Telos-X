@@ -1,6 +1,6 @@
-"""TEx - Telegram Explorer.
+"""TELOS-X - Telegram Explorer.
 
-By: Th3 0bservator
+By: Ed3f
 """
 import asyncio
 import importlib
@@ -14,16 +14,16 @@ from typing import Dict, List, Optional
 
 import toml
 
-from TEx.core.base_module import BaseModule
+from TELOSX.core.base_module import BaseModule
 
-logger = logging.getLogger('TelegramExplorer')
+logger = logging.getLogger('Telos-X')
 
 VERSION: str = toml.load(os.path.join('..', 'pyproject.toml'))['tool']['poetry']['version']
 
 BANNER: str = f'''
-TEx - Telegram Explorer
+TELOS-X - Telegram Explorer
 Version {VERSION}
-By: Th3 0bservator
+By: Ed3f
 '''  # pylint: disable=R1732
 
 

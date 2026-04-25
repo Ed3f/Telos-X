@@ -4,9 +4,9 @@ import logging
 from configparser import ConfigParser
 from typing import Dict, List, cast
 
-from TEx.core.base_module import BaseModule
-from TEx.database.telegram_group_database import TelegramGroupDatabaseManager
-from TEx.models.database.telegram_db_model import TelegramGroupOrmEntity
+from TELOSX.core.base_module import BaseModule
+from TELOSX.database.telegram_group_database import TelegramGroupDatabaseManager
+from TELOSX.models.database.telegram_db_model import TelegramGroupOrmEntity
 
 logger = logging.getLogger('TelegramExplorer')
 

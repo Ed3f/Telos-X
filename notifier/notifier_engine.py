@@ -4,9 +4,9 @@ from typing import Dict, List
 
 from telethon.events import NewMessage
 
-from TEx.notifier.discord_notifier import DiscordNotifier
-from TEx.notifier.slack_notifier import SlackNotifier
-from TEx.notifier.notifier_base import BaseNotifier
+from TELOSX.notifier.discord_notifier import DiscordNotifier
+from TELOSX.notifier.slack_notifier import SlackNotifier
+from TELOSX.notifier.notifier_base import BaseNotifier
 
 
 class NotifierEngine:
@@ -41,11 +41,11 @@ class NotifierEngine:
         """Configure Finder."""
         self.__load_notifiers(config)
 
-    async def run(self, message: NewMessage.Event, notifiers: List[str] = [], **kwargs) -> None:
+    async def run(self, message: NewMessage.Event, notifiers: List[str]| None = None, **kwargs) -> None:
         """Dispatch all Notifications."""
         
-        if len(notifiers) == 0:
-            notifiers = self.notifiers
+        if notifiers is None:
+            notifiers = list(self.notifiers.keys()) 
 
         for dispatcher_name in notifiers:
 

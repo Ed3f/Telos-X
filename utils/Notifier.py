@@ -1,6 +1,6 @@
 import requests
-from TEx.database.telegram_group_database import TelegramGroupDatabaseManager
-from TEx.models.database.telegram_db_model import TelegramGroupOrmEntity
+from TELOSX.database.telegram_group_database import TelegramGroupDatabaseManager
+from TELOSX.models.database.telegram_db_model import TelegramGroupOrmEntity
 
 def comunication_group_message(message, group_id, id):
     db_group= TelegramGroupDatabaseManager.get_by_id(group_id)

@@ -2,7 +2,7 @@
 import re
 from configparser import SectionProxy
 
-from TEx.finder.base_finder import BaseFinder
+from TELOSX.finder.base_finder import BaseFinder
 
 
 class RegexFinder(BaseFinder):

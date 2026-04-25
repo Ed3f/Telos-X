@@ -1,6 +1,6 @@
 """Facade Entity for Report Generation."""
 
-from TEx.models.database.telegram_db_model import TelegramGroupOrmEntity
+from TELOSX.models.database.telegram_db_model import TelegramGroupOrmEntity
 
 
 class TelegramGroupReportFacadeEntity:  # pylint: disable=R0902

@@ -1,1 +1,1 @@
-"""TEx Root."""
+"""Telos-X Root."""

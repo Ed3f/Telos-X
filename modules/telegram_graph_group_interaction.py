@@ -8,9 +8,9 @@ from configparser import ConfigParser
 from typing import Dict, List, Optional, Tuple, cast
 import logging
 
-from TEx.core.base_module import BaseModule
-from TEx.database.telegram_group_database import TelegramGroupDatabaseManager, TelegramMessageDatabaseManager, TelegramUserDatabaseManager
-from TEx.models.database.telegram_db_model import TelegramGroupOrmEntity, TelegramMessageOrmEntity, TelegramUserOrmEntity
+from TELOSX.core.base_module import BaseModule
+from TELOSX.database.telegram_group_database import TelegramGroupDatabaseManager, TelegramMessageDatabaseManager, TelegramUserDatabaseManager
+from TELOSX.models.database.telegram_db_model import TelegramGroupOrmEntity, TelegramMessageOrmEntity, TelegramUserOrmEntity
 
 logger = logging.getLogger('TelegramExplorer')
 

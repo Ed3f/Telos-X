@@ -3,7 +3,7 @@
 import datetime
 from typing import Optional
 
-from TEx.models.database.telegram_db_model import TelegramMessageOrmEntity
+from TELOSX.models.database.telegram_db_model import TelegramMessageOrmEntity
 
 
 class TelegramMessageReportFacadeEntity:  # pylint: disable=R0902

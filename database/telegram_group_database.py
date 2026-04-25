@@ -14,9 +14,9 @@ from sqlalchemy.orm import Session
 
 from cachetools import cached
 
-from TEx.database import GROUPS_CACHE, USERS_CACHE
-from TEx.database.db_manager import DbManager
-from TEx.models.database.telegram_db_model import (
+from TELOSX.database import GROUPS_CACHE, USERS_CACHE
+from TELOSX.database.db_manager import DbManager
+from TELOSX.models.database.telegram_db_model import (
     TelegramGroupOrmEntity,
     TelegramMediaOrmEntity,
     TelegramMessageOrmEntity,

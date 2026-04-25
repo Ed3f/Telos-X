@@ -4,10 +4,10 @@ import os.path
 from configparser import ConfigParser
 from typing import Dict, List, cast
 
-from TEx.core.base_module import BaseModule
-from TEx.database.telegram_group_database import TelegramGroupDatabaseManager, TelegramMediaDatabaseManager, \
+from TELOSX.core.base_module import BaseModule
+from TELOSX.database.telegram_group_database import TelegramGroupDatabaseManager, TelegramMediaDatabaseManager, \
     TelegramMessageDatabaseManager
-from TEx.models.database.telegram_db_model import TelegramGroupOrmEntity, TelegramMediaOrmEntity
+from TELOSX.models.database.telegram_db_model import TelegramGroupOrmEntity, TelegramMediaOrmEntity
 
 logger = logging.getLogger('TelegramExplorer')
 
