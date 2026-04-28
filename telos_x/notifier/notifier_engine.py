@@ -7,6 +7,7 @@ from telethon.events import NewMessage
 from telos_x.notifier.discord_notifier import DiscordNotifier
 from telos_x.notifier.slack_notifier import SlackNotifier
 from telos_x.notifier.notifier_base import BaseNotifier
+from typing import Dict, List, Optional
 
 
 class NotifierEngine:
@@ -41,13 +42,11 @@ class NotifierEngine:
         """Configure Finder."""
         self.__load_notifiers(config)
 
-    async def run(self, message: NewMessage.Event, notifiers: List[str]| None = None, **kwargs) -> None:
-        """Dispatch all Notifications."""
-        
+   
+    async def run(self, message: NewMessage.Event, notifiers: Optional[List[str]] = None, **kwargs) -> None:
         if notifiers is None:
-            notifiers = list(self.notifiers.keys()) 
+            notifiers = list(self.notifiers.keys())
 
         for dispatcher_name in notifiers:
-
             target_notifier: BaseNotifier = self.notifiers[dispatcher_name]['instance']
             await target_notifier.run(message=message, **kwargs)
