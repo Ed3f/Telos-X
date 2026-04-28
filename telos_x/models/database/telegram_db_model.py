@@ -1,7 +1,7 @@
 """Projects DB Models."""
 
 import datetime
-from typing import Optional
+from typing import Optional, Text
 from sqlalchemy import Boolean, DateTime, Integer, String, Float, ForeignKeyConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -158,3 +158,8 @@ class TelegramMessageAIAnalysisOrmEntity(TelegramDataBaseDeclarativeBase):
 
     model_version: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime)
+    risk_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    severity: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    escalated_to_bert: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    rule_hits_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    alert_recommended: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)

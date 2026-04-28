@@ -175,32 +175,10 @@ class MessageProcessingService:
         # 6. AI result di default
         ai_result = self._empty_ai_result()
 
-        # 7. Classificazione AI
-        if text_for_ai and text_for_ai.strip():
-            try:
-                ai_result = self.ai_analysis.analyze_message(text_for_ai)
-                logger.info(
-                    "[AI] pipeline=%s group=%s msg=%s activity=%s attack=%s nation=%s provider=%s",
-                    pipeline,
-                    group_id,
-                    message.id,
-                    ai_result["activity"]["top_label"],
-                    ai_result["attack_type"]["top_label"],
-                    ai_result["target_nation"]["top_label"],
-                    translation_result.provider,
-                )
-            except Exception as exc:
-                logger.error(
-                    "[AI ERROR] pipeline=%s group=%s msg=%s err=%s",
-                    pipeline,
-                    group_id,
-                    message.id,
-                    exc,
-                )
-
-        # 8. Finder
+        # 7. Finder as signal source
+        signal_hits = []
         try:
-            await self.finder.run(
+            signal_hits = await self.finder.find_signals(
                 message=message,
                 translation=translated_text,
                 group_id=group_id,
@@ -215,15 +193,64 @@ class MessageProcessingService:
                 exc,
             )
 
-        # 9. Notifier standard
+        # 8. AI analysis with signal context
+        if text_for_ai and text_for_ai.strip():
+            try:
+                ai_result = self.ai_analysis.analyze_message(
+                    text_for_ai,
+                    signal_hits=signal_hits,
+                )
+                logger.info(
+                    "[AI] pipeline=%s group=%s msg=%s activity=%s attack=%s nation=%s severity=%s risk=%.3f provider=%s",
+                    pipeline,
+                    group_id,
+                    message.id,
+                    ai_result["activity"]["top_label"],
+                    ai_result["attack_type"]["top_label"],
+                    ai_result["target_nation"]["top_label"],
+                    ai_result["meta"]["severity"],
+                    ai_result["meta"]["risk_score"],
+                    translation_result.provider,
+                )
+            except Exception as exc:
+                logger.error(
+                    "[AI ERROR] pipeline=%s group=%s msg=%s err=%s",
+                    pipeline,
+                    group_id,
+                    message.id,
+                    exc,
+                )
+
+        # 9. Standard alerting based on severity/rule hits
         try:
-            await self.notifier.run(
-                message=message,
-                translation=translated_text,
-                group_id=group_id,
-                id=message.id,
-                rule_id=None,
-            )
+            if ai_result["meta"]["alert_recommended"]:
+                await self.notifier.run(
+                    message=message,
+                    translation=translated_text,
+                    raw_text=raw_text,
+                    group_id=group_id,
+                    id=message.id,
+                    rule_id=None,
+                    severity=ai_result["meta"]["severity"],
+                    rule_hits=signal_hits,
+                    risk_score=ai_result["meta"]["risk_score"],
+                )
+
+            for hit in signal_hits:
+                if hit["notifiers"]:
+                    await self.notifier.run(
+                        message=message,
+                        translation=translated_text,
+                        raw_text=raw_text,
+                        group_id=group_id,
+                        id=message.id,
+                        notifiers=hit["notifiers"],
+                        rule_id=hit["id"],
+                        response=hit.get("response"),
+                        severity=ai_result["meta"]["severity"],
+                        rule_hits=signal_hits,
+                        risk_score=ai_result["meta"]["risk_score"],
+                    )
         except Exception as exc:
             logger.error(
                 "[NOTIFIER ERROR] pipeline=%s group=%s msg=%s err=%s",
@@ -259,8 +286,13 @@ class MessageProcessingService:
                 "top_attack_type_score": ai_result["attack_type"]["top_score"],
                 "top_target_nation": ai_result["target_nation"]["top_label"],
                 "top_target_nation_score": ai_result["target_nation"]["top_score"],
-                "model_version": "lr_v1",
+                "model_version": "lr_bert_v2",
                 "created_at": datetime.now(tz=pytz.UTC),
+                "risk_score": ai_result["meta"]["risk_score"],
+                "severity": ai_result["meta"]["severity"],
+                "escalated_to_bert": ai_result["meta"]["escalated_to_bert"],
+                "rule_hits_json": json.dumps(signal_hits, ensure_ascii=False),
+                "alert_recommended": ai_result["meta"]["alert_recommended"],
             })
         except Exception as exc:
             logger.error(
@@ -270,29 +302,37 @@ class MessageProcessingService:
                 message.id,
                 exc,
             )
-
     def _empty_ai_result(self) -> Dict:
-        """
-        Struttura AI standard di fallback.
-        """
         return {
             "activity": {
                 "labels": [],
                 "scores": {},
                 "top_label": None,
                 "top_score": 0.0,
+                "source_model": "none",
             },
             "attack_type": {
                 "labels": [],
                 "scores": {},
                 "top_label": None,
                 "top_score": 0.0,
+                "source_model": "none",
             },
             "target_nation": {
                 "labels": [],
                 "scores": {},
                 "top_label": None,
                 "top_score": 0.0,
+                "source_model": "none",
+            },
+            "meta": {
+                "risk_score": 0.0,
+                "severity": "low",
+                "alert_recommended": False,
+                "escalated_to_bert": False,
+                "rule_hits_count": 0,
+                "rule_hit_ids": [],
+                "escalation_reasons": [],
             },
         }
 
