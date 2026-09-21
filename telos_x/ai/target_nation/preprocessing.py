@@ -18,8 +18,26 @@ AMERICA = {
     "brazil", "argentina", "chile", "peru", "colombia", "venezuela",
 }
 ASIA = {
-    "india", "turkey", "china", "japan", "south korea", "korea",
-    "pakistan", "indonesia", "philippines", "bangladesh",
+    "india",
+    "turkey",
+    "china",
+    "japan",
+    "south korea",
+    "korea",
+    "pakistan",
+    "indonesia",
+    "philippines",
+    "bangladesh",
+
+    "israel",
+    "iran",
+    "yemen",
+    "saudi arabia",
+    "saudi_arabia",
+    "uae",
+    "united arab emirates",
+    "russia",
+    "russian federation",
 }
 AFRICA = {
     "nigeria", "egypt", "south africa", "kenya", "morocco", "algeria",

@@ -2,7 +2,6 @@
 import logging
 import os
 import re
-import shutil
 from configparser import ConfigParser
 from operator import attrgetter
 from typing import Dict, List, Optional, cast
@@ -47,10 +46,6 @@ class TelegramExportTextGenerator(BaseModule):
         # Check Report and Assets Folder
         report_root_folder: str = args['report_folder']
         assets_root_folder: str = f'{report_root_folder}/assets/'
-
-        # Purge Report Folder
-        if os.path.exists(report_root_folder):
-            shutil.rmtree(report_root_folder)
 
         # Create Dir Structure
         DirectoryManagerUtils.ensure_dir_struct(report_root_folder)
@@ -150,7 +145,14 @@ class TelegramExportTextGenerator(BaseModule):
         h_messages: List[str] = []
 
         # Compile all Regex
-        compiled_regex = [re.compile(item, flags=re.IGNORECASE | re.MULTILINE) for item in filter_regexs]
+        compiled_regex = []
+        for item in filter_regexs:
+            try:
+                compiled_regex.append(
+                    re.compile(item, flags=re.IGNORECASE | re.MULTILINE)
+                )
+            except re.error as exc:
+                logger.warning('Ignoring invalid export regex %r: %s', item, exc)
 
         # Loop on Messages
         for message in messages:

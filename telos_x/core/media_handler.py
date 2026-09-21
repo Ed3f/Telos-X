@@ -2,6 +2,7 @@
 import hashlib
 import logging
 import os
+from pathlib import Path
 
 from typing import Dict, Optional
 
@@ -11,19 +12,19 @@ from telethon.tl.types import (Message,
                                MessageMediaPhoto,
                                MessageMediaWebPage)
 
-from TELOSX.core.media_download_handling.do_nothing_media_downloader import DoNothingMediaDownloader
-from TELOSX.core.media_download_handling.photo_media_downloader import PhotoMediaDownloader
-from TELOSX.core.media_download_handling.std_media_downloader import StandardMediaDownloader
-from TELOSX.core.media_metadata_handling.do_nothing_media_handler import DoNothingHandler
-from TELOSX.core.media_metadata_handling.generic_binary_handler import GenericBinaryMediaHandler
-from TELOSX.core.media_metadata_handling.geo_handler import GeoMediaHandler
-from TELOSX.core.media_metadata_handling.mp4_handler import MediaMp4Handler
-from TELOSX.core.media_metadata_handling.pdf_handler import PdfMediaHandler
-from TELOSX.core.media_metadata_handling.photo_handler import PhotoMediaHandler
-from TELOSX.core.media_metadata_handling.sticker_handler import MediaStickerHandler
-from TELOSX.core.media_metadata_handling.text_handler import TextPlainHandler
-from TELOSX.core.media_metadata_handling.webimage_handler import WebImageStickerHandler
-from TELOSX.database.telegram_group_database import TelegramMediaDatabaseManager
+from telos_x.core.media_download_handling.do_nothing_media_downloader import DoNothingMediaDownloader
+from telos_x.core.media_download_handling.photo_media_downloader import PhotoMediaDownloader
+from telos_x.core.media_download_handling.std_media_downloader import StandardMediaDownloader
+from telos_x.core.media_metadata_handling.do_nothing_media_handler import DoNothingHandler
+from telos_x.core.media_metadata_handling.generic_binary_handler import GenericBinaryMediaHandler
+from telos_x.core.media_metadata_handling.geo_handler import GeoMediaHandler
+from telos_x.core.media_metadata_handling.mp4_handler import MediaMp4Handler
+from telos_x.core.media_metadata_handling.pdf_handler import PdfMediaHandler
+from telos_x.core.media_metadata_handling.photo_handler import PhotoMediaHandler
+from telos_x.core.media_metadata_handling.sticker_handler import MediaStickerHandler
+from telos_x.core.media_metadata_handling.text_handler import TextPlainHandler
+from telos_x.core.media_metadata_handling.webimage_handler import WebImageStickerHandler
+from telos_x.database.telegram_group_database import TelegramMediaDatabaseManager
 
 
 logger = logging.getLogger('TelegramExplorer')
@@ -117,6 +118,7 @@ class UniversalTelegramMediaHandler:
 
         # Download Media
         target_file_path: str = os.path.join(data_path, 'media', str(group_id))
+        Path(target_file_path).mkdir(parents=True, exist_ok=True)
         await executor_spec['downloader'](
             message=message,
             media_metadata=media_metadata,

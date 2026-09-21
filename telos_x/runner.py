@@ -10,19 +10,17 @@ import os
 import sys
 import types
 from configparser import ConfigParser
+from pathlib import Path
 from typing import Dict, List, Optional
 
-import toml
-
+from telos_x import __version__
 from telos_x.core.base_module import BaseModule
 
-logger = logging.getLogger('Telos-X')
-
-VERSION: str = toml.load(os.path.join('..', 'pyproject.toml'))['tool']['poetry']['version']
+logger = logging.getLogger(__name__)
 
 BANNER: str = f'''
 TELOS-X - Telegram Explorer
-Version {VERSION}
+Version {__version__}
 By: Ed3f
 '''  # pylint: disable=R1732
 
@@ -50,7 +48,9 @@ class TelegramMonitorRunner:
 
         logger.info(BANNER)
 
-        if not self.check_python_version():
+        if not self.check_python_version() and not any(
+            argument in {'-h', '--help'} for argument in sys.argv[1:]
+        ):
             return 1
 
         self.__load_settings()
@@ -72,7 +72,7 @@ class TelegramMonitorRunner:
         # Execute Post Pipeline
         self.__execute_sequence(args, data, self.config['PIPELINE']['post_pipeline_sequence'].split('\n'), 'Termination')
 
-        return 0
+        return 2 if data['internals']['panic'] else 0
 
     def __execute_sequence(self, args: Dict, data: Dict, sequence_spec: List, sequence_name: str) -> None:
 
@@ -94,7 +94,9 @@ class TelegramMonitorRunner:
 
             pipeline_item_meta: List[str] = pipeline_item.split('.')
 
-            osix_module: types.ModuleType = importlib.import_module(f'modules.{".".join(pipeline_item_meta[:-1])}')
+            osix_module: types.ModuleType = importlib.import_module(
+                f'telos_x.modules.{".".join(pipeline_item_meta[:-1])}'
+            )
             module_instance: BaseModule = getattr(osix_module, pipeline_item_meta[-1])()
 
             loop.run_until_complete(
@@ -133,16 +135,17 @@ class TelegramMonitorRunner:
 
         python_version = str(sys.version_info[0]) + "." + str(sys.version_info[1]) + "." + str(sys.version_info[2])
 
-        # Python Deprecated Version Check
-        if major != 3 or major == 3 and minor <= 9:
-            logger.warning('**** Python 3.8 and Python 3.9 is deprecated. Please, consider upgrade your Python runtime version. **** ')
-            logger.fatal(f'Current Installed Version is: {python_version}')
-
-        return True
+        supported = major == 3 and 10 <= minor < 13
+        if not supported:
+            logger.error(
+                'Unsupported Python %s; Telos-X requires Python >=3.10,<3.13.',
+                python_version,
+            )
+        return supported
 
     def __setup_logging(self) -> None:
         """Setups Log Config."""
-        logging.config.fileConfig(os.path.join(os.path.dirname(__file__), 'logging.conf'))
+        logging.config.fileConfig(Path(__file__).resolve().parent / 'logging.conf')
         logging.getLogger('telethon').setLevel(level=logging.WARNING)
 
     def __list_modules(self) -> None:
@@ -153,7 +156,7 @@ class TelegramMonitorRunner:
         """
         # Check Modules
         logger.info('[*] Installed Modules:')
-        for file in sorted(os.listdir(os.path.join(os.path.dirname(__file__), 'modules'))):
+        for file in sorted(os.listdir(Path(__file__).resolve().parent / 'modules')):
             if file not in TelegramMonitorRunner.MODULE_SUPRESS_LIST:
                 logger.info(f'\t{file}')
 
@@ -165,4 +168,7 @@ class TelegramMonitorRunner:
         """
         logger.info('[*] Loading Configurations:')
         self.config = ConfigParser()
-        self.config.read(os.path.join(os.path.dirname(__file__), 'config.ini'))
+        config_path = Path(__file__).resolve().parent / 'config.ini'
+        if not self.config.read(config_path):
+            logger.fatal('Default pipeline configuration not found: %s', config_path)
+            self.config = None

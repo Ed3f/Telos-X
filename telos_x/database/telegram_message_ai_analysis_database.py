@@ -13,18 +13,26 @@ class TelegramMessageAIAnalysisDatabaseManager:
     """Telegram Message AI Analysis Database Manager."""
 
     @staticmethod
-    def insert(entity_values: Dict) -> None:
-        """Insert one Telegram Message AI Analysis record."""
+    def insert(entity_values: Dict,) -> bool:
+
+        session = (DbManager.SESSIONS["data"])
+
         try:
-            DbManager.SESSIONS['data'].execute(
-                insert(TelegramMessageAIAnalysisOrmEntity).values(entity_values)
-            )
-            DbManager.SESSIONS['data'].commit()
+            session.execute(insert(TelegramMessageAIAnalysisOrmEntity).values(entity_values))
+            session.commit()
+            return True
 
         except sqlalchemy.exc.IntegrityError as exc:
-            if 'UNIQUE' in exc.orig.args[0]:
-                return
-            raise exc
+            session.rollback()
+
+            if ("UNIQUE" in str(exc.orig).upper()):
+                return False
+
+            raise
+
+        except Exception:
+            session.rollback()
+            raise
 
     @staticmethod
     def get_all_by_group(group_id: int) -> List[TelegramMessageAIAnalysisOrmEntity]:

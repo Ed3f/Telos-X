@@ -1,329 +1,511 @@
-"""Telegram Group Scrapper."""
+"""Telegram group scraper."""
 
-import pandas
-import re
+import asyncio
 import base64
+import csv
 import json
 import logging
 import os
 import pathlib
-from configparser import ConfigParser
-from typing import Dict, List, Optional, Tuple, cast
 import random
-from time import sleep
+import re
+from configparser import ConfigParser
 from datetime import datetime
+from typing import Dict, List, Optional, Tuple, Union, cast
 
-
-from telethon import functions, types
 import telethon.tl.types
-from telethon import TelegramClient
-from telethon.errors import ChatAdminRequiredError
-from telethon.tl.functions.messages import GetDialogsRequest
-from telethon.tl.types import ChatPhoto, InputPeerEmpty
-from telethon.tl.types.messages import Dialogs
+from telethon import TelegramClient, functions
+from telethon.errors import (
+    ChannelPrivateError,
+    ChatAdminRequiredError,
+    InviteRequestSentError,
+    RPCError,
+)
 from telethon.tl.functions.channels import JoinChannelRequest
-from telos_x.models.database.telegram_db_model import TelegramGroupOrmEntity
-from telethon.errors import ChannelPrivateError, InviteRequestSentError
+from telethon.tl.functions.messages import ImportChatInviteRequest
+from telethon.tl.types import Channel, Chat, ChatPhoto
 
 from telos_x.core.base_module import BaseModule
 from telos_x.core.mapper.telethon_channel_mapper import TelethonChannelEntityMapper
-from telos_x.core.temp_file import TempFileHandler
-from telos_x.database.telegram_group_database import TelegramGroupDatabaseManager, TelegramUserDatabaseManager, TelegramProfilePicDatabaseManager
 from telos_x.core.mapper.telethon_user_mapper import TelethonUserEntiyMapper
+from telos_x.core.temp_file import TempFileHandler
+from telos_x.database.telegram_group_database import (
+    TelegramGroupDatabaseManager,
+    TelegramProfilePicDatabaseManager,
+    TelegramUserDatabaseManager,
+)
+from telos_x.models.database.telegram_db_model import TelegramGroupOrmEntity
+from telos_x.paths import DEFAULT_GROUPS_FILE, PROJECT_ROOT
+
 
 logger = logging.getLogger('TelegramExplorer')
 
 
 class TelegramGroupScrapper(BaseModule):
-    """List all Groups on Telegram Account."""
+    """List all groups on the configured Telegram account."""
 
-    async def can_activate(self, config: ConfigParser, args: Dict, data: Dict) -> bool:
-        """
-        Abstract Method for Module Activation Function.
+    _GROUP_LINK_PATTERN = re.compile(
+        r"(?:https?://)?(?:t|telegram)\.(?:me|dog)/(joinchat/|\+)?([\w-]+)",
+        re.IGNORECASE,
+    )
 
-        :return:
-        """
+    async def can_activate(
+        self,
+        config: ConfigParser,
+        args: Dict,
+        data: Dict,
+    ) -> bool:
+        """Return whether group loading was requested."""
         return cast(bool, args['load_groups'])
 
     async def run(self, config: ConfigParser, args: Dict, data: Dict) -> None:
-        """Execute Module."""
+        """Load configured groups, their metadata, and their members."""
         if not await self.can_activate(config, args, data):
             logger.debug('\t\tModule is Not Enabled...')
             return
 
-        # Check Data Dict
-        if 'groups' not in data:
-            data['groups'] = {}
-            print(data['groups'])
-        if 'members' not in data:
-            data['members'] = {}
+        data.setdefault('groups', {})
+        data.setdefault('members', {})
 
-        # Get Client
         client: TelegramClient = data['telegram_client']
-        #Get all Groups on Db 
-        db_groups: List[TelegramGroupOrmEntity] = TelegramGroupDatabaseManager.get_all_by_phone_number(
-            config['CONFIGURATION']['phone_number'])
-        db_chat_usrs= [chat.group_username for chat in db_groups]
-        #Get all Groups from CSV file
-        link_group = pandas.read_csv("groups.csv")
-        find_group= re.compile("(?:t|telegram)\.(?:me|dog)\/(joinchat\/|\+)?([\w-]+)")
+        phone_number = config['CONFIGURATION']['phone_number']
+        data_path = config['CONFIGURATION']['data_path']
+        db_groups: List[TelegramGroupOrmEntity] = (
+            TelegramGroupDatabaseManager.get_all_by_phone_number(phone_number)
+        )
 
-        for groups in link_group['telegram_group']:
-            found = find_group.search(groups)
+        await self._join_configured_groups(
+            client=client,
+            group_references=self._load_group_links(config),
+            known_usernames=[group.group_username for group in db_groups],
+        )
 
-            if found:
-                usr=found#così ottendo l'username
-                print(usr.group(2))
-                if (usr.group(2) not in db_chat_usrs):
-                    minutes = random.randint(1, 3)
-                    print(minutes)
-                    sleep(minutes)
-                    #channel= await client(JoinChannelRequest(usr.group(2)))
-                    #print(channel)
-                    logger.info("Puppet account are join in the group\n")
-        
-        #Write Groups on file from DB 
-        # Get all Chats
-        chats: List = await self.load_groups(
-            client=client
-            )
-        
-        db_chats_ids = [chat.id for chat in db_groups]
-        chat_ids = [chat.id for chat in chats]
-        
-        new_chats = []
-        deleted_chats = []
+        chats = await self.load_groups(client=client)
+        self._write_group_status_file(chats, db_groups, data_path)
 
         for chat in chats:
-            if (chat.username):
-                #call to obtain discussion group of channel
-                full= await client(functions.channels.GetFullChannelRequest(chat.id))
-                full_channel= full.full_chat
-                
-                #Join on discussion group
-                if full_channel.linked_chat_id:
-                    linked_group = next(c for c in full.chats if c.id == full_channel.linked_chat_id)
-                    print(linked_group.username)
-
-            if chat.id not in db_chats_ids:
-                new_chats.append(chat.title)
-        
-        for group in db_groups:
-            if group.id not in chat_ids:    
-                deleted_chats.append(group.title)
-
-                
-
-        with open("not_active_group.txt", "w") as file:
-            
-            file.write("gruppi che non sono più monitorati:\n")
-            file.write('\n'.join(deleted_chats))
-        
-            file.write("Gruppi Monitorati dalla sonda\n")
-            file.write('\n'.join([chat.title for chat in chats]))
-            
-        for chat in chats:
-             
-            logger.info(f'\t\tProcessing "{chat.title} ({chat.id})" Members and Group Profile Picture')
-            
-            values: Dict = TelethonChannelEntityMapper.to_database_dict(
-                entity=chat,
-                target_phone_numer=config['CONFIGURATION']['phone_number']
+            try:
+                await self._process_group(
+                    client=client,
+                    chat=chat,
+                    phone_number=phone_number,
+                    data_path=data_path,
+                    config=config,
+                    refresh_profile_photos=args.get(
+                        'refresh_profile_photos', False
+                    ),
+                )
+            except (ChannelPrivateError, ChatAdminRequiredError, RPCError, ValueError):
+                logger.exception(
+                    'Unable to process Telegram group %s; continuing with the batch',
+                    getattr(chat, 'id', 'unknown'),
+                )
+            except Exception:
+                logger.exception(
+                    'Unexpected failure processing Telegram group %s; '
+                    'continuing with the batch',
+                    getattr(chat, 'id', 'unknown'),
                 )
 
-            # Get Photo - TODO: Refactory - Separate in Method
-            if chat.photo is not None and isinstance(chat.photo, ChatPhoto):
-                values['photo_id'] = chat.photo.photo_id
-                photo_name, photo_base64 = await self.get_profile_pic_b64(
-                    client=client,
-                    channel=chat,
-                    data_path=config['CONFIGURATION']['data_path'],
-                    force_reload=args['refresh_profile_photos']
-                    )
+    async def _process_group(
+        self,
+        *,
+        client: TelegramClient,
+        chat: Union[Channel, Chat],
+        phone_number: str,
+        data_path: str,
+        config: ConfigParser,
+        refresh_profile_photos: bool,
+    ) -> None:
+        """Persist one group, all exposed members, and selected profiles."""
+        logger.info(
+            '\t\tProcessing "%s (%s)" Members and Group Profile Picture',
+            chat.title,
+            chat.id,
+        )
+        await self._log_linked_discussion_group(client, chat)
 
-                values['photo_base64'] = photo_base64
-                values['photo_name'] = photo_name
-            else:
-                values['photo_id'] = None
-                values['photo_base64'] = None
-                values['photo_name'] = None
+        values = TelethonChannelEntityMapper.to_database_dict(
+            entity=chat,
+            target_phone_numer=phone_number,
+        )
+        if chat.photo is not None and isinstance(chat.photo, ChatPhoto):
+            values['photo_id'] = chat.photo.photo_id
+            photo_name, photo_base64 = await self.get_profile_pic_b64(
+                client=client,
+                channel=chat,
+                data_path=data_path,
+                force_reload=refresh_profile_photos,
+            )
+            values['photo_base64'] = photo_base64
+            values['photo_name'] = photo_name
+        else:
+            values['photo_id'] = None
+            values['photo_base64'] = None
+            values['photo_name'] = None
 
-            # Get Members - TODO: Refactory - Separate in Method
-            try:
-                members = await self.get_members(
-                    client=client,
-                    channel=chat,
-                    data_path = config['CONFIGURATION']['data_path']
-                    )
-                # Sync with DB
-                TelegramUserDatabaseManager.insert_or_update_batch(members)
+        # Required FK ordering: the group is committed before membership.
+        TelegramGroupDatabaseManager.insert_or_update(values)
 
-            except telethon.errors.rpcerrorlist.ChannelPrivateError:
-                logger.info('\t\t\t...Unable to Download Chat Participants due Private Chat Restrictions...')
-            except ValueError as _ex:
-                if 'PeerChannel' in _ex.args[0]:
-                    logger.info('\t\t\t...Unable to Download Chat Participants due PerChannel Restrictions...')
-                    continue
-                raise _ex
-            except TypeError as _ex:
-                if "'ChannelParticipants' object is not subscriptable" in _ex.args[0]:
-                    logger.info('\t\t\t...Unable to Download Chat Participants due ChannelParticipants Restrictions...')
-                    continue
-                raise _ex
+        members = await self.get_members(
+            client=client,
+            channel=chat,
+            data_path=data_path,
+        )
+        TelegramUserDatabaseManager.insert_or_update_batch(members)
+        await self._profile_selected_users(
+            client=client,
+            members=members,
+            data_path=data_path,
+            config=config,
+        )
 
-            # Add Group to DB
-            TelegramGroupDatabaseManager.insert_or_update(values)
+    @staticmethod
+    def _project_root() -> pathlib.Path:
+        """Return the directory containing the project package and config."""
+        return PROJECT_ROOT
 
-    async def load_groups(self, client: TelegramClient) -> List[telethon.tl.types.Channel]:
-        """Load all Groups from Telegram."""
-        logger.info("\t\tEnumerating Groups")
+    def _resolve_groups_file(self, config: ConfigParser) -> pathlib.Path:
+        """Resolve CONFIGURATION.groups_file with a project-root fallback."""
+        configured_path = config.get(
+            'CONFIGURATION',
+            'groups_file',
+            fallback='',
+        ).strip()
+        if not configured_path:
+            return DEFAULT_GROUPS_FILE
 
-        # DownLoad Groups
-        result: Dialogs = await client(GetDialogsRequest(
-            offset_date=None,
-            offset_id=0,
-            offset_peer=InputPeerEmpty(),
-            limit=20000,
-            hash=0
-            ))
+        groups_file = pathlib.Path(configured_path).expanduser()
+        if not groups_file.is_absolute():
+            groups_file = self._project_root() / groups_file
+        return groups_file.resolve()
 
-        return [chat for chat in result.chats if isinstance(chat, telethon.tl.types.Channel)]
-
-    async def get_members(self, client: TelegramClient, channel: telethon.tl.types.Channel, data_path) -> List[Dict]:
-        """Download Telegram Group Members."""
-        h_result: List = []
+    def _load_group_links(self, config: ConfigParser) -> List[str]:
+        """Load discovery group references without depending on the CWD."""
+        groups_file = self._resolve_groups_file(config)
+        if not groups_file.exists():
+            logger.warning(
+                'Telegram groups discovery file not found: %s. '
+                'No new groups will be joined.',
+                groups_file,
+            )
+            return []
 
         try:
+            with groups_file.open('r', encoding='utf-8-sig', newline='') as stream:
+                reader = csv.DictReader(stream)
+                if not reader.fieldnames or 'telegram_group' not in reader.fieldnames:
+                    logger.error(
+                        'Telegram groups discovery file %s must contain a '
+                        'telegram_group column.',
+                        groups_file,
+                    )
+                    return []
+                return [
+                    row['telegram_group'].strip()
+                    for row in reader
+                    if row.get('telegram_group') and row['telegram_group'].strip()
+                ]
+        except (OSError, csv.Error) as exc:
+            logger.error('Unable to read groups file %s: %s', groups_file, exc)
+            return []
 
-            # Iterate over the Participants
-            async for member in client.iter_participants(channel):
+    async def _join_configured_groups(
+        self,
+        client: TelegramClient,
+        group_references: List[str],
+        known_usernames: List[str],
+    ) -> None:
+        """Join public usernames or private invite links from ``groups.csv``."""
+        known = {
+            username.lstrip('@').casefold()
+            for username in known_usernames
+            if username
+        }
 
-                # Build Model
-                user_dict_data: Dict = TelethonUserEntiyMapper.to_database_dict(member)
-                
-                user_photo_dict:Dict = {}
-                
-                username = user_dict_data["username"]
-                
-                logger.info(f"download photo of {username}")
-                if user_dict_data['first_name'] == 'Exodius':
-                    
-                    result = await client(functions.users.GetFullUserRequest(
-                        id= 'gobaisi'
-                        ))
-                    if result.full_user.about: 
-                        user_dict_data['bio']= result.full_user.about
+        for reference in group_references:
+            match = self._GROUP_LINK_PATTERN.search(reference)
+            invite_prefix: Optional[str] = None
+            target: Optional[str] = None
+            if match:
+                invite_prefix, target = match.groups()
+            elif re.fullmatch(r'@?[\w-]+', reference):
+                target = reference.lstrip('@')
 
-                    photos = await client.get_profile_photos(user_dict_data['id'])
-                    #print(photos)
-                    print(result.stringify())
-                    if result.full_user.profile_photo:
-                        user_dict_data['photo_id']= result.full_user.profile_photo.id
-                
-                        data: str= f'{data_path}/profile_pic/{user_dict_data["id"]}.jpg'
-                        user_dict_data['photo_name']= pathlib.Path(data).name
-                        path: str = await client.download_profile_photo(entity= user_dict_data["id"],file= data, download_big=True)
-                        print(path)
-                    #         #get Base64
-                        
-                        for photo in photos:
-                            #print(photo)
-                            #id of photo 
-                            user_photo_dict['photo_id'] =  photo.id
-                            print(user_photo_dict['photo_id'])
+            if not target:
+                logger.warning('Ignoring invalid Telegram group reference: %s', reference)
+                continue
+            if not invite_prefix and target.casefold() in known:
+                continue
 
-                            photo_path:str = f'{data_path}/profile_pic/{user_dict_data["id"]}/{photo.id}.jpg'
+            await asyncio.sleep(random.randint(1, 3))
+            try:
+                if invite_prefix:
+                    await client(ImportChatInviteRequest(target))
+                else:
+                    await client(JoinChannelRequest(target))
+                    known.add(target.casefold())
+                logger.info('Telegram account joined group reference %s', reference)
+            except InviteRequestSentError:
+                logger.info('Join request submitted for Telegram group %s', reference)
+            except (ChannelPrivateError, RPCError, ValueError) as exc:
+                logger.warning('Unable to join Telegram group %s: %s', reference, exc)
 
-                            #photo_name                               
-                            user_dict_data['photo_name']= pathlib.Path(photo_path).name
-                            print(user_dict_data['photo_name'])
+    @staticmethod
+    async def _log_linked_discussion_group(
+        client: TelegramClient,
+        chat: Union[Channel, Chat],
+    ) -> None:
+        if not isinstance(chat, Channel) or not chat.username:
+            return
+        try:
+            full = await client(functions.channels.GetFullChannelRequest(chat.id))
+            linked_chat_id = full.full_chat.linked_chat_id
+            if linked_chat_id:
+                linked_group = next(
+                    (candidate for candidate in full.chats if candidate.id == linked_chat_id),
+                    None,
+                )
+                if linked_group is not None:
+                    logger.debug(
+                        'Linked discussion group for %s: %s',
+                        chat.id,
+                        linked_group.username,
+                    )
+        except (RPCError, ValueError) as exc:
+            logger.debug('Unable to resolve linked discussion group %s: %s', chat.id, exc)
 
-                            path_old_photo:str = await client.download_media(photo, file= photo_path)
-                            
-                            content_base64:str= ''
-                            with open(path_old_photo, 'rb') as file:
-                                content_base64= base64.b64encode(file.read()).decode()
-                                file.close()
-                            
-                            #photo base64
-                            user_photo_dict['photo_base64']= content_base64  
-                            
-                            os.remove(path_old_photo)    
-                            #id of user 
-                            user_photo_dict['id']= user_dict_data['id']
+    @staticmethod
+    def _write_group_status_file(
+        chats: List[Union[Channel, Chat]],
+        db_groups: List[TelegramGroupOrmEntity],
+        data_path: str,
+    ) -> None:
+        """Preserve the operational monitored/deleted group status output."""
+        chat_ids = {chat.id for chat in chats}
+        deleted_titles = [
+            group.title
+            for group in db_groups
+            if group.id not in chat_ids
+        ]
+        status_path = pathlib.Path(data_path) / 'not_active_group.txt'
+        status_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with status_path.open('w', encoding='utf-8') as stream:
+                stream.write('Gruppi che non sono piu monitorati:\n')
+                stream.write('\n'.join(deleted_titles))
+                stream.write('\nGruppi monitorati dalla sonda:\n')
+                stream.write('\n'.join(chat.title for chat in chats))
+        except OSError as exc:
+            logger.warning('Unable to write group status file %s: %s', status_path, exc)
 
-                            #date of pubblication photo
-                            user_photo_dict['date_photo'] = photo.date
-                            print(user_photo_dict['date_photo'])
-                            #print(user_photo_dict)
-                            TelegramProfilePicDatabaseManager.insert(user_photo_dict)
-                        if path: 
-                            content_base64:str= ''
-                            with open(path, 'rb') as file:
-                                    content_base64= base64.b64encode(file.read()).decode()
-                            file.close()
-                            user_dict_data['photo_base64']= content_base64
-                    
-                user_dict_data['date_profilation'] = datetime.now()
-                user_dict_data['group_id']= channel.id    
-                    #os.remove(data)
+    async def load_groups(
+        self,
+        client: TelegramClient,
+    ) -> List[Union[Channel, Chat]]:
+        """Load every channel and basic chat visible to the account."""
+        logger.info('\t\tEnumerating Groups')
+        groups: List[Union[Channel, Chat]] = []
+        async for dialog in client.iter_dialogs(limit=None):
+            entity = getattr(dialog, 'entity', None)
+            if isinstance(entity, (Channel, Chat)):
+                groups.append(entity)
+        return groups
 
-                # Return
-                h_result.append(user_dict_data)
-
+    async def get_members(
+        self,
+        client: TelegramClient,
+        channel: Union[Channel, Chat],
+        data_path: str,
+    ) -> List[Dict]:
+        """Return lightweight member profiles for a Telegram group."""
+        del data_path  # Kept in the public signature for caller compatibility.
+        members: List[Dict] = []
+        try:
+            async for member in client.iter_participants(channel, limit=None):
+                user_values = TelethonUserEntiyMapper.to_database_dict(member)
+                user_values['bio'] = None
+                user_values['date_profilation'] = None
+                user_values['group_id'] = channel.id
+                members.append(user_values)
         except ChatAdminRequiredError:
-            logger.info('\t\t\t...Unable to Download Chat Participants due Permission Restrictions...')
+            logger.info(
+                '\t\t\t...Unable to Download Chat Participants '
+                'due Permission Restrictions...'
+            )
+        retrieved = len(members)
+        expected = getattr(channel, 'participants_count', None)
+        logger.info('Retrieved %s members from group %s', retrieved, channel.id)
+        if expected is not None and expected > retrieved:
+            logger.warning(
+                'Telegram exposed %s/%s participants for group %s. '
+                'Participant enumeration may be limited by Telegram.',
+                retrieved,
+                expected,
+                channel.id,
+            )
+        return members
 
-        return h_result
+    @staticmethod
+    def _parse_profiling_values(value: str, strip_at: bool = False) -> set[str]:
+        """Parse comma/whitespace separated configuration values."""
+        parsed = set()
+        for item in re.split(r'[\s,]+', value):
+            normalized = item.strip()
+            if not normalized:
+                continue
+            if strip_at:
+                normalized = normalized.lstrip('@')
+            parsed.add(normalized.casefold())
+        return parsed
 
-    async def get_profile_pic_b64(self, client: TelegramClient, channel: telethon.tl.types.Channel, data_path: str, force_reload: bool = False) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Download the Profile Picture and Returns as Base64 Image.
+    def should_profile_user(
+        self,
+        user_dict_data: Dict,
+        config: ConfigParser,
+    ) -> bool:
+        """Return whether an observed user is eligible for extended profiling."""
+        if not config.getboolean('PROFILING', 'enabled', fallback=False):
+            return False
+        if config.getboolean('PROFILING', 'profile_all_users', fallback=False):
+            return True
 
-        :param client:
-        :param channel:
-        :param force_reload:
-        :return: File Name and File Base64 Content
-        """
-        target_path: str = f'{data_path}/profile_pic/{channel.id}.jpg'
-        temp_file: str = f'profile_pic/{channel.id}.bin'
+        target_usernames = self._parse_profiling_values(
+            config.get('PROFILING', 'target_usernames', fallback=''),
+            strip_at=True,
+        )
+        target_first_names = self._parse_profiling_values(
+            config.get('PROFILING', 'target_first_names', fallback=''),
+        )
+        username = str(user_dict_data.get('username') or '').lstrip('@').casefold()
+        first_name = str(user_dict_data.get('first_name') or '').casefold()
+        return username in target_usernames or first_name in target_first_names
 
-        # Check Temporary Folder
+    async def _profile_selected_users(
+        self,
+        client: TelegramClient,
+        members: List[Dict],
+        data_path: str,
+        config: ConfigParser,
+    ) -> None:
+        """Download and persist extended data only for configured targets."""
+        for user_values in members:
+            if not self.should_profile_user(user_values, config):
+                continue
+            try:
+                await self._profile_user(client, user_values, data_path)
+                TelegramUserDatabaseManager.insert_or_update(user_values)
+            except Exception:  # A target failure must not discard light profiles.
+                logger.exception(
+                    'Unable to complete extended Telegram profile for user %s',
+                    user_values.get('id'),
+                )
+
+    async def _profile_user(
+        self,
+        client: TelegramClient,
+        user_values: Dict,
+        data_path: str,
+    ) -> None:
+        """Populate bio and profile pictures for one selected user."""
+        user_id = user_values['id']
+        full_result = await client(
+            functions.users.GetFullUserRequest(id=user_id)
+        )
+        user_values['bio'] = full_result.full_user.about
+        user_values['date_profilation'] = datetime.now()
+
+        profile_photo = full_result.full_user.profile_photo
+        if profile_photo:
+            user_values['photo_id'] = profile_photo.id
+            current_path = pathlib.Path(data_path) / 'profile_pic' / f'{user_id}.jpg'
+            current_path.parent.mkdir(parents=True, exist_ok=True)
+            generated_path = await client.download_profile_photo(
+                entity=user_id,
+                file=str(current_path),
+                download_big=True,
+            )
+            if generated_path:
+                generated = pathlib.Path(generated_path)
+                try:
+                    user_values['photo_name'] = generated.name
+                    user_values['photo_base64'] = base64.b64encode(
+                        generated.read_bytes()
+                    ).decode()
+                finally:
+                    generated.unlink(missing_ok=True)
+
+        photos = await client.get_profile_photos(user_id)
+        for photo in photos:
+            photo_path = (
+                pathlib.Path(data_path)
+                / 'profile_pic'
+                / str(user_id)
+                / f'{photo.id}.jpg'
+            )
+            photo_path.parent.mkdir(parents=True, exist_ok=True)
+            downloaded_path = await client.download_media(photo, file=str(photo_path))
+            if not downloaded_path:
+                continue
+            downloaded = pathlib.Path(downloaded_path)
+            try:
+                TelegramProfilePicDatabaseManager.insert(
+                    {
+                        'photo_id': photo.id,
+                        'photo_base64': base64.b64encode(
+                            downloaded.read_bytes()
+                        ).decode(),
+                        'photo_name': downloaded.name,
+                        'id': user_id,
+                        'date_photo': photo.date,
+                    }
+                )
+            finally:
+                downloaded.unlink(missing_ok=True)
+
+    async def get_profile_pic_b64(
+        self,
+        client: TelegramClient,
+        channel: Union[Channel, Chat],
+        data_path: str,
+        force_reload: bool = False,
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """Download a group profile picture and return name plus base64 data."""
+        target_path = os.path.join(data_path, 'profile_pic', f'{channel.id}.jpg')
+        temp_file = f'profile_pic/{channel.id}.bin'
+
         if not force_reload and TempFileHandler.file_exist(temp_file):
             temp_data: Dict = json.loads(TempFileHandler.read_file_text(temp_file))
-
             return temp_data['path'], temp_data['content']
 
-        # Download Photo
+        pathlib.Path(target_path).parent.mkdir(parents=True, exist_ok=True)
         try:
-            generated_path: str = await client.download_profile_photo(
+            generated_path = await client.download_profile_photo(
                 entity=channel,
                 file=target_path,
-                download_big=True
-                )
-        except ValueError as ex:
-            if 'PeerChannel' in ex.args[0]:
+                download_big=True,
+            )
+        except ValueError as exc:
+            if exc.args and 'PeerChannel' in str(exc.args[0]):
                 return None, None
+            raise
+        if not generated_path:
+            return None, None
 
-            raise ex
+        generated = pathlib.Path(generated_path)
+        try:
+            base_64_content = base64.b64encode(generated.read_bytes()).decode()
+        finally:
+            generated.unlink(missing_ok=True)
 
-        # Get the Base64
-        base_64_content: str = ''
-        with open(generated_path, 'rb') as file:
-            base_64_content = base64.b64encode(file.read()).decode()
-            file.close()
-
-        # Remove File
-        os.remove(generated_path)
-
-        # Write Temporary Data
         TempFileHandler.write_file_text(
             path=temp_file,
-            content=json.dumps({
-                'path': pathlib.Path(generated_path).name,
-                'content': base_64_content
-                }),
-            validate_seconds=604800
-            )
-
-        return pathlib.Path(generated_path).name, base_64_content
+            content=json.dumps(
+                {
+                    'path': generated.name,
+                    'content': base_64_content,
+                }
+            ),
+            validate_seconds=604800,
+        )
+        return generated.name, base_64_content

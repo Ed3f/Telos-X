@@ -55,12 +55,7 @@ class TelegramTranslationProvider(BaseTranslationProvider):
                     text=[
                         types.TextWithEntities(
                             text=text,
-                            entities=[
-                                types.MessageEntityUnknown(
-                                    offset=0,
-                                    length=min(len(text), 1)
-                                )
-                            ]
+                            entities=[],
                         )
                     ]
                 )

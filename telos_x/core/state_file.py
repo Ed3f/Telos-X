@@ -5,8 +5,8 @@ from datetime import datetime
 
 import pytz
 
-from TELOSX.models.database.temp_db_models import StateFileOrmEntity
-from TELOSX.database.db_manager import DbManager
+from telos_x.models.database.temp_db_models import StateFileOrmEntity
+from telos_x.database.db_manager import DbManager
 
 
 class StateFileHandler:
@@ -41,18 +41,21 @@ class StateFileHandler:
         :param validate_seconds: File Validation in Seconds
         :return: None
         """
-        # Delete if Exists
-        DbManager.SESSIONS['temp'].execute(
-            StateFileOrmEntity.__table__.delete().where(StateFileOrmEntity.path == path)
+        session = DbManager.SESSIONS['temp']
+        try:
+            session.execute(
+                StateFileOrmEntity.__table__.delete().where(
+                    StateFileOrmEntity.path == path
+                )
             )
-
-        entity: StateFileOrmEntity = StateFileOrmEntity(
-            path=path,
-            data=content,
-            created_at=int(datetime.now(tz=pytz.UTC).timestamp())
+            session.add(
+                StateFileOrmEntity(
+                    path=path,
+                    data=content,
+                    created_at=int(datetime.now(tz=pytz.UTC).timestamp()),
+                )
             )
-        DbManager.SESSIONS['temp'].add(entity)
-
-        # Execute
-        DbManager.SESSIONS['temp'].flush()
-        DbManager.SESSIONS['temp'].commit()
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise

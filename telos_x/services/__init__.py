@@ -1,8 +1,9 @@
-from traslation.schemas import TranslationResult
-from traslation.base_provider import BaseTranslationProvider
-from traslation.telegram_provider import TelegramTranslationProvider
-from traslation.local_provider import CTranslate2LocalTranslationProvider
-from traslation.translation_service import TranslationService
+from .traslation.schemas import TranslationResult
+from .traslation.base_provider import BaseTranslationProvider
+from .traslation.telegram_provider import TelegramTranslationProvider
+from .traslation.local_provider import CTranslate2LocalTranslationProvider
+from .traslation.translation_service import TranslationService
+from .message_processing import MessageProcessingService
 
 __all__ = [
     "TranslationResult",
@@ -10,4 +11,5 @@ __all__ = [
     "TelegramTranslationProvider",
     "CTranslate2LocalTranslationProvider",
     "TranslationService",
+    "MessageProcessingService",
 ]

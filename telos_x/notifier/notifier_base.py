@@ -17,7 +17,8 @@ class BaseNotifier:
 
     def configure_base(self, config: SectionProxy) -> None:
         """Configure Base Notifier."""
-        self.cache = TTLCache(maxsize=4096, ttl=int(config['prevent_duplication_for_minutes']) * 60)
+        ttl_minutes = config.getint('prevent_duplication_for_minutes', fallback=5)
+        self.cache = TTLCache(maxsize=4096, ttl=max(ttl_minutes, 0) * 60)
 
     def check_is_duplicated(self, message: str) -> Tuple[bool, str]:
         """Check if Message is Duplicated on Notifier."""
@@ -38,3 +39,7 @@ class BaseNotifier:
     @abc.abstractmethod
     async def run(self, message: NewMessage.Event, **kwargs) -> None:
         """Run the Notification Process."""
+
+    async def send_text(self, text: str) -> None:
+        """Send a generic operational status message."""
+        raise NotImplementedError

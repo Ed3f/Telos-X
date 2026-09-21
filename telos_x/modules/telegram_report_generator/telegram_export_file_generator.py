@@ -50,13 +50,10 @@ class TelegramExportFileGenerator(BaseModule):
         report_root_folder: str = args['report_folder']
         assets_root_folder: str = f'{report_root_folder}/assets/'
 
-        # Purge Report Folder
-        if os.path.exists(report_root_folder):
-            shutil.rmtree(report_root_folder)
-
         # Create Dir Structure
         DirectoryManagerUtils.ensure_dir_struct(report_root_folder)
         DirectoryManagerUtils.ensure_dir_struct(assets_root_folder)
+        TelegramExportFileGenerator.__HASH_CACHE.clear()
 
         # Load Groups from DB
         db_groups: List[TelegramGroupOrmEntity] = TelegramGroupDatabaseManager.get_all_by_phone_number(

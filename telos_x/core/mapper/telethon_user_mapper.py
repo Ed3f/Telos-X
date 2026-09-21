@@ -13,11 +13,11 @@ class TelethonUserEntiyMapper:
         # Build Model
         value: Dict = {
             'id': member.id,
-            'is_bot': member.bot,
-            'is_fake': member.fake,
-            'is_self': member.is_self,
-            'is_scam': member.scam,
-            'is_verified': member.verified,
+            'is_bot': bool(member.bot),
+            'is_fake': bool(member.fake),
+            'is_self': bool(member.is_self),
+            'is_scam': bool(member.scam),
+            'is_verified': bool(member.verified),
             'first_name': member.first_name,
             'last_name': member.last_name,
             'username': member.username,

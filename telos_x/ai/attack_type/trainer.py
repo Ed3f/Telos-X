@@ -15,7 +15,11 @@ from .preprocessing import parse_list, clean_and_normalize, merge_attack_classes
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-DATA_PATH = BASE_DIR / "Dataset" / "telegram_dataset_attack_type_classification 1.xlsx"
+DATA_PATH = (
+    BASE_DIR
+    / "dataset"
+    / "telegram_dataset_attack_type_classification 1.xlsx"
+)
 MODELS_DIR = Path(__file__).resolve().parent / "models"
 
 

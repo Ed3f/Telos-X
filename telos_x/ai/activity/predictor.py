@@ -5,13 +5,21 @@ import joblib
 import pandas as pd
 
 from .preprocessing import clean_text_for_inference
+from telos_x.ai.joblib_compat import (
+    apply_sklearn_artifact_compatibility,
+    install_legacy_joblib_aliases,
+)
 
 
 class ActivityPredictor:
     def __init__(self):
         models_dir = Path(__file__).resolve().parent / "models"
 
-        self.model = joblib.load(models_dir / "pipeline.joblib")
+        install_legacy_joblib_aliases()
+
+        self.model = apply_sklearn_artifact_compatibility(
+            joblib.load(models_dir / "pipeline.joblib")
+        )
         self.labels = joblib.load(models_dir / "labels.joblib")
 
         with open(models_dir / "thresholds.json", "r", encoding="utf-8") as f:

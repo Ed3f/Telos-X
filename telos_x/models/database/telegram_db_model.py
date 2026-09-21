@@ -1,10 +1,25 @@
 """Projects DB Models."""
 
 import datetime
-from typing import Optional, Text
-from sqlalchemy import Boolean, DateTime, Integer, String, Float, ForeignKeyConstraint
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from typing import Optional
 
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
+
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+)
 
 class TelegramDataBaseDeclarativeBase(DeclarativeBase):  # type: ignore
     """Global Telegram DB Declarative Base."""
@@ -109,9 +124,40 @@ class TelegramUserOrmEntity(TelegramDataBaseDeclarativeBase):
     photo_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     photo_base64: Mapped[Optional[str]] = mapped_column(String(1024000), nullable=True)
     photo_name: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
-    date_profilation: Mapped[datetime.datetime]= mapped_column(DateTime)
-    bio : Mapped[str]= mapped_column(String(1024), nullable= True)
-    group_id: Mapped[int] = mapped_column(Integer, index= True)
+    date_profilation: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
+    bio: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+
+
+class TelegramUserGroupOrmEntity(TelegramDataBaseDeclarativeBase):
+    """Association between Telegram users and observed groups."""
+
+    __bind_key__ = "data"
+    __tablename__ = "telegram_user_group"
+
+    # TelegramDataBaseDeclarativeBase normally supplies an artificial ``id``
+    # primary key.  This association table intentionally has only the natural
+    # composite primary key below.
+    id = None
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "telegram_user.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+        index=True,
+    )
+    group_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "telegram_group.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+        index=True,
+    )
 
 class TelegramProfilePicOrmEntity(TelegramDataBaseDeclarativeBase):
     __bind_key__ = 'data'
@@ -126,40 +172,49 @@ class TelegramProfilePicOrmEntity(TelegramDataBaseDeclarativeBase):
 class TelegramMessageAIAnalysisOrmEntity(TelegramDataBaseDeclarativeBase):
     """Telegram Message AI Analysis ORM Model."""
 
-    __bind_key__ = 'data'
-    __tablename__ = 'telegram_message_ai_analysis'
+    __bind_key__ = "data"
 
-    # PK autonoma della tabella AI
-    ai_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    __tablename__ = ("telegram_message_ai_analysis")
 
-    # FK logica verso telegram_message (che nel tuo schema ha PK composta)
-    message_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    group_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    message_id: Mapped[int] = (mapped_column(Integer,nullable=False,index=True,))
+
+    group_id: Mapped[int] = (mapped_column(Integer,nullable=False,index=True,))
 
     __table_args__ = (
         ForeignKeyConstraint(
-            ['message_id', 'group_id'],
-            ['telegram_message.id', 'telegram_message.group_id']
+            [
+                "message_id",
+                "group_id",
+            ],
+            [
+                "telegram_message.id",
+                "telegram_message.group_id",
+            ],
+        ),
+
+        UniqueConstraint(
+            "message_id",
+            "group_id",
+            "model_version",
+            name=(
+                "uq_ai_message_model"
+            ),
         ),
     )
 
-    activity_json: Mapped[Optional[str]] = mapped_column(String(65535), nullable=True)
-    attack_type_json: Mapped[Optional[str]] = mapped_column(String(65535), nullable=True)
-    target_nation_json: Mapped[Optional[str]] = mapped_column(String(65535), nullable=True)
-
-    top_activity: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    top_activity_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-
-    top_attack_type: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    top_attack_type_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-
-    top_target_nation: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    top_target_nation_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-
-    model_version: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    created_at: Mapped[datetime.datetime] = mapped_column(DateTime)
-    risk_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    severity: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
-    escalated_to_bert: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
-    rule_hits_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    alert_recommended: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    activity_json: Mapped[Optional[str]] = mapped_column(String(65535),nullable=True,)
+    attack_type_json: Mapped[Optional[str]] = mapped_column(String(65535),nullable=True,)
+    target_nation_json: Mapped[Optional[str]] = mapped_column(String(65535),nullable=True,)
+    top_activity: Mapped[Optional[str]] = mapped_column(String(255),nullable=True,)
+    top_activity_score: Mapped[Optional[float]] = mapped_column(Float,nullable=True,)
+    top_attack_type: Mapped[Optional[str]] = mapped_column(String(255),nullable=True,)
+    top_attack_type_score: Mapped[Optional[float]] = mapped_column(Float,nullable=True,)
+    top_target_nation: Mapped[Optional[str]] = mapped_column(String(255),nullable=True,)
+    top_target_nation_score: Mapped[Optional[float]] = mapped_column(Float,nullable=True,)
+    model_version: Mapped[str] = (mapped_column(String(128),nullable=False,))
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime,nullable=False,)
+    risk_score: Mapped[Optional[float]] = mapped_column(Float,nullable=True,)
+    severity: Mapped[Optional[str]] = mapped_column(String(32),nullable=True,)
+    escalated_to_bert: Mapped[Optional[bool]] = mapped_column(Boolean,nullable=True,)
+    rule_hits_json: Mapped[Optional[str]] = mapped_column(Text,nullable=True,)
+    alert_recommended: Mapped[Optional[bool]] = mapped_column(Boolean,nullable=True,)

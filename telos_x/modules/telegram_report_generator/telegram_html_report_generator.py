@@ -30,6 +30,7 @@ from telos_x.models.facade.telegram_group_report_facade_entity import TelegramGr
     TelegramGroupReportFacadeEntityMapper
 from telos_x.models.facade.telegram_message_report_facade_entity import TelegramMessageReportFacadeEntity, \
     TelegramMessageReportFacadeEntityMapper
+from telos_x.paths import REPORT_TEMPLATES
 
 logger = logging.getLogger('TelegramExplorer')
 
@@ -57,17 +58,13 @@ class TelegramReportGenerator(BaseModule):
         report_root_folder: str = args['report_folder']
         assets_root_folder: str = os.path.join(report_root_folder, 'assets')
 
-        # Purge Report Folder
-        if os.path.exists(report_root_folder):
-            shutil.rmtree(report_root_folder)
-
         # Create Dir Structure
         DirectoryManagerUtils.ensure_dir_struct(report_root_folder)
         DirectoryManagerUtils.ensure_dir_struct(assets_root_folder)
 
         # Get Report Template
         env = Environment(
-            loader=FileSystemLoader("report_templates"),
+            loader=FileSystemLoader(str(REPORT_TEMPLATES)),
             autoescape=select_autoescape()
             )
         report_template: Template = env.get_template("default_report.html")
@@ -280,7 +277,7 @@ class TelegramReportGenerator(BaseModule):
 
             if media:
                 if media.mime_type == 'application/vnd.geo':
-                    media_geo = media.title.replace('|', ',')
+                    media_geo = (media.title or '').replace('|', ',')
 
                 else:
 
@@ -412,7 +409,7 @@ class TelegramReportGenerator(BaseModule):
         if dest_ix <= len(messages):
             return messages[target_ix + 1:dest_ix]
 
-        return messages[target_ix:]
+        return messages[target_ix + 1:]
 
     def dedup_messages(self, messages: List[TelegramMessageReportFacadeEntity]) -> List[TelegramMessageReportFacadeEntity]:
         """Deduplicate the Messages."""

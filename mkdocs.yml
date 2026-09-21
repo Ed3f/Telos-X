@@ -1,0 +1,8 @@
+site_name: Telos-X
+site_description: Telegram-based Cyber Threat Intelligence analysis pipeline
+repo_url: https://github.com/Ed3f/Telos-X
+theme:
+  name: material
+nav:
+  - Home: index.md
+strict: true

@@ -45,6 +45,11 @@ class TelegramMaintenancePurgeOldData(BaseModule):
             except ValueError as ex:
                 logger.info('\t\t\tUnable to Purge Old Messages...')
                 logger.error(ex)
+            except Exception:
+                logger.exception(
+                    'Unable to purge group %s; continuing with remaining groups',
+                    group.id,
+                )
 
         # Compress DB
         TelegramMediaDatabaseManager.apply_db_maintenance()
@@ -66,15 +71,15 @@ class TelegramMaintenancePurgeOldData(BaseModule):
 
             for media in all_medias:
 
-                # Remove from Disk
+                # Remove the DB row first. A later filesystem failure can
+                # only leave an orphan file, not a broken DB reference.
+                TelegramMediaDatabaseManager.delete_media_by_id(media_id=media.id)
+
                 media_file_name: str = os.path.join(media_root_path, 'media', str(media.group_id), media.file_name)
                 logger.info(f'\t\t\t\t{media_file_name}')
 
                 if os.path.exists(media_file_name):
                     os.remove(media_file_name)
-
-                # Remove from DB
-                TelegramMediaDatabaseManager.delete_media_by_id(media_id=media.id)
 
         # Delete all Old Messages
         total_messages: int = TelegramMessageDatabaseManager.remove_all_messages_by_age(

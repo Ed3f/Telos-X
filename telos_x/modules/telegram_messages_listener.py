@@ -14,7 +14,6 @@ from telethon.tl.types import Message
 from telos_x.core.base_module import BaseModule
 from telos_x.services.message_processing import MessageProcessingService
 
-logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
 logger = logging.getLogger('TelegramExplorer')
 
 class TelegramGroupMessageListener(BaseModule):
@@ -25,7 +24,7 @@ class TelegramGroupMessageListener(BaseModule):
         Abstract Method for Module Activation Function.
         :return:
         """
-        
+
         return cast(bool, args['listen'])
     
     def __init__(self) -> None:
@@ -40,47 +39,53 @@ class TelegramGroupMessageListener(BaseModule):
         """Handle the Message."""
         message: Message = event.message
 
-        # Apply Filter (If group filtering are enabled)
-        if len(self.group_ids) > 0 and event.chat.id not in self.group_ids:
-            logger.debug(f'\t\tMessage Filtered (GroupID={event.chat.id}) ...')
+        if event is None or event.chat is None:
+            return
+        if (self.group_ids and event.chat.id not in self.group_ids):
+            logger.debug(
+                "Message Filtered (GroupID=%s)",
+                event.chat.id,
+            )
             return
 
-        # Defensive check
-        if event and not event.chat:
-            return
-
-        # Delegate the whole processing pipeline
-        await self.processor.process_message(
-            message=message,
-            group_id=event.chat.id,
-            client=client,
-            data_path=self.data_path,
-            download_media=self.download_media,
-            target_phone_number=self.target_phone_number,
-            pipeline="realtime",
-            chat=event.chat,
-            event=event,
-        )   
+        try:
+            await self.processor.process_message(
+                message=message,
+                group_id=event.chat.id,
+                client=client,
+                data_path=self.data_path,
+                download_media=self.download_media,
+                target_phone_number=self.target_phone_number,
+                pipeline="realtime",
+                chat=event.chat,
+                event=event,
+            )
+        except Exception:
+            logger.exception(
+                'Unexpected realtime processing failure for message %s; '
+                'the listener remains active',
+                getattr(message, 'id', 'unknown'),
+            )
 
     async def __message_edited_handler(self, event:MessageEdited.Event) -> None:
-        print('Message', event.id, 'changed at', event.date)
+        logger.info('Message %s changed at %s', event.id, event.date)
 
     async def __message_deleted_handler(self, event:MessageDeleted.Event) -> None:
         for msg_id in event.deleted_ids:
-            print('Message', msg_id,'was deleted in', event.chat_id)
+            logger.info('Message %s was deleted in %s', msg_id, event.chat_id)
 
     async def __chat_action_handler(self, event:ChatAction.Event) -> None:
         if event.user_joined:
-            user_info=  await event.get_user()
-            #Notifier.alertUserToJoinGroup(user_info)
-        if event.user_added:       
-            user_info_to_add= await event.get_added_by()
-            #Notifier.alertUserToJoinGroup(user_info_to_add)                
+            user_info = await event.get_user()
+            logger.info('User joined: %s', getattr(user_info, 'id', 'unknown'))
+        if event.user_added:
+            user_info_to_add = await event.get_added_by()
+            logger.info('User added by: %s', getattr(user_info_to_add, 'id', 'unknown'))
         if event.user_left:
-            user_info_to_left= await event.get_user()
-            #Notifier.alertUserToJoinGroup(user_info_to_left)
-        if event.get_pinned_messages:
-            pinned_message=await event.get_pinned_messages()
+            user_info_to_left = await event.get_user()
+            logger.info('User left: %s', getattr(user_info_to_left, 'id', 'unknown'))
+        if getattr(event, 'new_pin', False):
+            await event.get_pinned_messages()
 
 
     

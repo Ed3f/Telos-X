@@ -2,7 +2,7 @@
 import datetime
 import logging
 import os
-import time
+import asyncio
 import zipfile
 from configparser import ConfigParser
 from os.path import basename
@@ -69,7 +69,7 @@ class TelegramReportSentViaTelegram(BaseModule):
                 datetime.datetime.strftime(datetime.datetime.now(tz=pytz.UTC), '%y-%m-%d %H:%M:%S')
                 ).replace('\\n', '\n')
             )
-        time.sleep(1)
+        await asyncio.sleep(1)
         # Sent the Report
         await client.send_file(receiver, f'{report_root_folder}/{attach_name}')
 

@@ -48,10 +48,20 @@ class SaveStateFileHandler(BaseModule):
         """Execute Module."""
         state_file_name: str = config['MODULE_SaveStateFileHandler']['file_name'].replace("{0}", config['CONFIGURATION']['phone_number'])
 
-        # Remove Internal Controls
-        del data['internals']
+        safe_data = {
+            key: value
+            for key, value in data.items()
+            if key != 'internals'
+        }
+        connection_state = safe_data.get('telegram_connection')
+        if isinstance(connection_state, dict):
+            safe_data['telegram_connection'] = {
+                key: value
+                for key, value in connection_state.items()
+                if key not in {'api_id', 'api_hash'}
+            }
 
         StateFileHandler.write_file_text(
             state_file_name,
-            json.dumps(data)
+            json.dumps(safe_data)
             )

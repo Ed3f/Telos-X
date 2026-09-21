@@ -15,7 +15,11 @@ from .preprocessing import prepare_nation_dataframe, meta_features_df
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-DATA_PATH = BASE_DIR / "Dataset" / "telegram_dataset_nation_classification.xlsx"
+DATA_PATH = (
+    BASE_DIR
+    / "dataset"
+    / "telegram_dataset_nation_classification.xlsx"
+)
 MODELS_DIR = Path(__file__).resolve().parent / "models"
 
 

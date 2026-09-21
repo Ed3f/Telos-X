@@ -1,8 +1,6 @@
 """Telegram Statistics Generator."""
 import datetime
 import logging
-import os
-import shutil
 from configparser import ConfigParser
 from io import TextIOWrapper
 from typing import Dict, List, TypedDict, cast
@@ -56,10 +54,6 @@ class TelegramStatsGenerator(BaseModule):
 
         # Check Report and Assets Folder
         report_root_folder: str = args['report_folder']
-
-        # Purge Report Folder
-        if os.path.exists(report_root_folder):
-            shutil.rmtree(report_root_folder)
 
         # Create Dir Structure
         DirectoryManagerUtils.ensure_dir_struct(report_root_folder)
@@ -185,10 +179,17 @@ class TelegramStatsGenerator(BaseModule):
     async def __render(self, params: RenderParams) -> None:
         """Render Report."""
         # Calculate Average Messages per Day
-        stats_avg_messages_day = params['stats_total_messages'] / datetime.timedelta(seconds=params['limit_seconds']).days
+        report_days = max(
+            datetime.timedelta(seconds=params['limit_seconds']).days,
+            1,
+        )
+        stats_avg_messages_day = params['stats_total_messages'] / report_days
 
         # Define the Largest Group Name
-        max_large_group_name: int = max([len(item['group']) for item in params['stats_messages_per_groups']]) + 1  # pylint: disable=R1728
+        max_large_group_name = max(
+            (len(item['group']) for item in params['stats_messages_per_groups']),
+            default=len('Group'),
+        ) + 1
 
         logger.info('\t\t\tRendering')
         with open(f'{params["report_root_folder"]}/stats.txt', 'wt', encoding='utf-8') as file:
@@ -198,7 +199,7 @@ class TelegramStatsGenerator(BaseModule):
             start = (datetime.datetime.now(tz=pytz.UTC) - datetime.timedelta(seconds=params['limit_seconds'])).strftime('%Y-%m-%d %H:%M:%S')
             now = datetime.datetime.now(tz=pytz.UTC).strftime('%Y-%m-%d %H:%M:%S')
 
-            file.write(f'TEx Statistics Report ({params["target_phone_number"]})')
+            file.write(f'Telos-X Statistics Report ({params["target_phone_number"]})')
             file.write(f'\nGenerated at {now} for period starting from {start} to {end}\n')
 
             file.write(f'\nTotal Groups      : {params["stats_total_groups"]}')

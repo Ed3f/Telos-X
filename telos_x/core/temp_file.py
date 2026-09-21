@@ -6,8 +6,8 @@ from datetime import datetime
 
 import pytz
 
-from TELOSX.models.database.temp_db_models import TempDataOrmEntity
-from TELOSX.database.db_manager import DbManager
+from telos_x.models.database.temp_db_models import TempDataOrmEntity
+from telos_x.database.db_manager import DbManager
 
 
 class TempFileHandler:
@@ -35,23 +35,31 @@ class TempFileHandler:
     @staticmethod
     def remove_expired_entries() -> int:
         """Remove all Expired Entries."""
-        total: int = DbManager.SESSIONS['temp'].execute(
-            TempDataOrmEntity.__table__.delete().where(
-                TempDataOrmEntity.valid_at <= int(datetime.now(tz=pytz.UTC).timestamp())
+        session = DbManager.SESSIONS['temp']
+        try:
+            total = session.execute(
+                TempDataOrmEntity.__table__.delete().where(
+                    TempDataOrmEntity.valid_at
+                    <= int(datetime.now(tz=pytz.UTC).timestamp())
                 )
             ).rowcount
-
-        DbManager.SESSIONS['temp'].flush()
-        DbManager.SESSIONS['temp'].commit()
-        return total
+            session.commit()
+            return int(total or 0)
+        except Exception:
+            session.rollback()
+            raise
 
     @staticmethod
     def purge() -> int:
         """Remove all Entries."""
-        total: int = DbManager.SESSIONS['temp'].execute(TempDataOrmEntity.__table__.delete()).rowcount
-        DbManager.SESSIONS['temp'].flush()
-        DbManager.SESSIONS['temp'].commit()
-        return total
+        session = DbManager.SESSIONS['temp']
+        try:
+            total = session.execute(TempDataOrmEntity.__table__.delete()).rowcount
+            session.commit()
+            return int(total or 0)
+        except Exception:
+            session.rollback()
+            raise
 
     @staticmethod
     def write_file_text(path: str, content: str, validate_seconds: int = 3600) -> None:
@@ -63,19 +71,25 @@ class TempFileHandler:
         :param validate_seconds: File Validation in Seconds
         :return: None
         """
-        # Delete if Exists
-        DbManager.SESSIONS['temp'].execute(
-            TempDataOrmEntity.__table__.delete().where(TempDataOrmEntity.path == path)
+        session = DbManager.SESSIONS['temp']
+        try:
+            session.execute(
+                TempDataOrmEntity.__table__.delete().where(
+                    TempDataOrmEntity.path == path
+                )
             )
-
-        entity: TempDataOrmEntity = TempDataOrmEntity(
-            path=path,
-            data=content,
-            created_at=int(datetime.now(tz=pytz.UTC).timestamp()),
-            valid_at=int(datetime.now(tz=pytz.UTC).timestamp()) + validate_seconds
+            session.add(
+                TempDataOrmEntity(
+                    path=path,
+                    data=content,
+                    created_at=int(datetime.now(tz=pytz.UTC).timestamp()),
+                    valid_at=(
+                        int(datetime.now(tz=pytz.UTC).timestamp())
+                        + validate_seconds
+                    ),
+                )
             )
-        DbManager.SESSIONS['temp'].add(entity)
-
-        # Execute
-        DbManager.SESSIONS['temp'].flush()
-        DbManager.SESSIONS['temp'].commit()
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise

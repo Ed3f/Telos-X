@@ -1,6 +1,8 @@
 """Directory Manager."""
 
-import os
+from pathlib import Path
+
+from telos_x.paths import resolve_project_path
 
 
 class DirectoryManagerUtils:
@@ -13,7 +15,7 @@ class DirectoryManagerUtils:
         :param path:
         :return:
         """
-        target_path: str = os.path.abspath(os.path.join(os.getcwd(), path))
-
-        if not os.path.exists(target_path):
-            os.makedirs(target_path, exist_ok=True)
+        target_path = Path(path).expanduser()
+        if not target_path.is_absolute():
+            target_path = resolve_project_path(target_path)
+        target_path.mkdir(parents=True, exist_ok=True)

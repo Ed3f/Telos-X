@@ -1,37 +1,117 @@
-import os
-import psutil
-from time import sleep
-import requests
+"""Operating system statistics utilities."""
 
-def get_size(bytes, suffix="B"):
-    factor = 1024
-    for unit in ["", "K", "M", "G", "T", "P"]:
-        if bytes < factor:
-            return f"{bytes:.2f}{unit}{suffix}"
-        bytes /= factor
-def information_sistem(): 
-        partitions = psutil.disk_partitions()
-        filename= "/home/sl3p3r/Desktop/telos_x/data_local.db"
-        size = os.path.getsize(filename) 
-        for partition in partitions:
-            print(f"=== Device: {partition.device} ===")
-            print(f"  Mountpoint: {partition.mountpoint}")
-            print(f"  File system type: {partition.fstype}")
-            try:
-                partition_usage = psutil.disk_usage(partition.mountpoint)
-            except PermissionError:
-                continue
-            headers = {"Content-type": "application/json"}
-            SLACK_WEBHOOK=  "https://hooks.slack.com/services/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" 
-            print(f"  Total Size: {get_size(partition_usage.total)}")
-            print(f"  Used: {get_size(partition_usage.used)}")
-            print(f"  Free: {get_size(partition_usage.free)}")
-            print(f"  Percentage: {partition_usage.percent}%")
-            if partition_usage.percent >= 90.0:
-                message_error= "Memory is running out"
-                data= {"text":f"Message:{message_error}"}
-                requests.post(SLACK_WEBHOOK, headers=headers, json= data)
-        #sleep(wait_time) 
-        data= {"text":f"Total Size:{get_size(partition_usage.total)}\nUsed: {get_size(partition_usage.used)}\nFree: {get_size(partition_usage.free)}\nPercentage: {partition_usage.percent}%"}
-        print(f"send alert:{data}")
-        requests.post(SLACK_WEBHOOK, headers=headers, json= data)
+from __future__ import annotations
+
+import shutil
+from pathlib import Path
+from typing import Dict
+
+import psutil
+
+
+def get_disk_stats(
+    path: str,
+) -> Dict[str, float]:
+    """
+    Return disk usage statistics for the filesystem containing ``path``.
+
+    Values are expressed in GB, except ``percent_used``.
+    """
+
+    target_path = Path(
+        path
+    ).expanduser()
+
+    # If data_path does not exist yet, use its nearest existing parent.
+    while not target_path.exists() and target_path != target_path.parent:
+        target_path = target_path.parent
+
+    usage = shutil.disk_usage(
+        target_path
+    )
+
+    total_gb = (
+        usage.total
+        / (1024 ** 3)
+    )
+
+    used_gb = (
+        usage.used
+        / (1024 ** 3)
+    )
+
+    free_gb = (
+        usage.free
+        / (1024 ** 3)
+    )
+
+    percent_used = (
+        (
+            usage.used
+            / usage.total
+        )
+        * 100
+        if usage.total
+        else 0.0
+    )
+
+    return {
+        "total_gb": round(
+            total_gb,
+            2,
+        ),
+        "used_gb": round(
+            used_gb,
+            2,
+        ),
+        "free_gb": round(
+            free_gb,
+            2,
+        ),
+        "percent_used": round(
+            percent_used,
+            2,
+        ),
+    }
+
+
+def get_system_stats(
+    data_path: str,
+) -> Dict:
+    """
+    Return the principal system statistics used by Telos-X.
+    """
+
+    memory = (
+        psutil.virtual_memory()
+    )
+
+    return {
+        "disk": get_disk_stats(
+            data_path
+        ),
+
+        "memory": {
+            "total_gb": round(
+                memory.total
+                / (1024 ** 3),
+                2,
+            ),
+
+            "available_gb": round(
+                memory.available
+                / (1024 ** 3),
+                2,
+            ),
+
+            "percent_used": float(
+                memory.percent
+            ),
+        },
+
+        "cpu_percent": float(
+            psutil.cpu_percent(
+                interval=None
+            )
+        ),
+    }

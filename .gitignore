@@ -1,0 +1,78 @@
+# =========================
+# Python cache / bytecode
+# =========================
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+.audit-venv/
+.python/
+
+# =========================
+# Testing / tooling cache
+# =========================
+.pytest_cache/
+.tox/
+.test-tmp/
+.uv-cache/
+.poetry-cache/
+.poetry-config/
+.poetry-data/
+.coverage
+htmlcov/
+
+# =========================
+# Build / generated files
+# =========================
+build/
+dist/
+compiled_docs/
+
+# =========================
+# Environment / secrets
+# =========================
+.env
+.env.*
+config.ini
+prova_confing.config
+
+# =========================
+# Telegram session files
+# =========================
+*.session
+*.session-journal
+
+# =========================
+# Databases / local data
+# =========================
+*.db
+data_local.db
+temp_local.db
+
+# =========================
+# Runtime output / logs
+# =========================
+not_active_group.txt
+example.log
+*.log
+
+# =========================
+# Typing metadata
+# =========================
+py.typed
+
+# =========================
+# Archives
+# =========================
+*.zip
+
+# =========================
+# Local research material
+# =========================
+paper_interessanti_per_estendere_il_tool/

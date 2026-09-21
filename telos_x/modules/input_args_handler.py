@@ -2,12 +2,10 @@
 
 import argparse
 import logging
-import os
 from configparser import ConfigParser
 from typing import Dict, List
 
-import toml
-
+from telos_x import __version__
 from telos_x.core.base_module import BaseModule
 
 logger = logging.getLogger('TelegramExplorer')
@@ -129,20 +127,6 @@ class InputArgsHandler(BaseModule):
                     },
                 }
             },
-        'messages_analysys':{
-          'help': 'NLP analysys scraped message stored in the Database', 
-          'sub_args':{
-              'config':{
-                    'param': '--config', 'type': str, 'action': 'store', 'help': 'Configuration File.',
-                    'default': None, 'required': True,
-                },
-                'group_id':{
-                    'param': '--group_id', 'type': str, 'action': 'store',
-                    'help': 'Target Group IDs. Ex: --group GroupA,GroupB,"Group C"',
-                    'default': '*', 'required': False
-                },
-          }   
-        },
         'graph':{
             'help': 'Export graph of interaction user', 
             'sub_args':{
@@ -201,7 +185,7 @@ class InputArgsHandler(BaseModule):
                 'mime_type': {
                     'param': '--mime_type', 'type': str, 'action': 'store',
                     'help': 'Mimetype to be Exported',
-                    'default': None, 'required': False
+                    'default': '*', 'required': False
                     },
                 'limit_days': {
                     'param': '--limit_days', 'type': int, 'action': 'store',
@@ -244,12 +228,12 @@ class InputArgsHandler(BaseModule):
                 'title': {
                     'param': '--title', 'type': str, 'action': 'store',
                     'help': 'Report Title',
-                    'default': 'telos_x Report @@now@@', 'required': True
+                    'default': 'telos_x Report @@now@@', 'required': False
                     },
                 'attachment_name': {
                     'param': '--attachment_name', 'type': str, 'action': 'store',
                     'help': 'Report Attachment FileName',
-                    'default': 'report_@@now@@', 'required': True
+                    'default': 'report_@@now@@', 'required': False
                     },
                 }
             },
@@ -312,9 +296,10 @@ class InputArgsHandler(BaseModule):
 
     async def run(self, config: ConfigParser, args: Dict, data: Dict) -> None:
         """Execute Module."""
-        telos_x_version: str = toml.load(os.path.join('..', 'pyproject.toml'))['tool']['poetry']['version']
-        parent_parser = argparse.ArgumentParser(description=f'Telos-X - Telegram Monitor - {telos_x_version}')  # pylint: disable=R1732
-        sub_parser = parent_parser.add_subparsers(title='actions', dest='action')
+        parent_parser = argparse.ArgumentParser(description=f'Telos-X - Telegram Monitor - {__version__}')  # pylint: disable=R1732
+        sub_parser = parent_parser.add_subparsers(
+            title='actions', dest='action', required=True
+        )
 
         # Add Parameters to Arg Parser
         for arg in InputArgsHandler.__ARGS:  # pylint: disable=C0206
@@ -325,10 +310,19 @@ class InputArgsHandler(BaseModule):
             for sub_arg in spec['sub_args']:
                 sub_arg_spec: Dict = spec['sub_args'][sub_arg]
 
+                argument_options = {
+                    'action': sub_arg_spec['action'],
+                    'dest': sub_arg,
+                    'help': sub_arg_spec['help'],
+                    'default': sub_arg_spec['default'],
+                    'required': sub_arg_spec['required'],
+                }
+                if sub_arg_spec['action'] == 'store':
+                    argument_options['type'] = sub_arg_spec['type']
                 parser_sub_command.add_argument(
-                    sub_arg_spec['param'], action=sub_arg_spec['action'], dest=sub_arg,
-                    help=sub_arg_spec['help'], default=sub_arg_spec['default'], required=sub_arg_spec['required']
-                    )
+                    sub_arg_spec['param'],
+                    **argument_options,
+                )
 
         # Parse Args
         input_args: argparse.Namespace = parent_parser.parse_args()
