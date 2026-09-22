@@ -2,10 +2,7 @@
 # Python cache / bytecode
 # =========================
 __pycache__/
-**/__pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
 
 # =========================
 # Virtual environments
@@ -52,14 +49,11 @@ prova_confing.config
 # Databases / local data
 # =========================
 *.db
-data_local.db
-temp_local.db
 
 # =========================
 # Runtime output / logs
 # =========================
 not_active_group.txt
-example.log
 *.log
 
 # =========================
@@ -76,3 +70,11 @@ py.typed
 # Local research material
 # =========================
 paper_interessanti_per_estendere_il_tool/
+
+# =========================
+# IDE / OS
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
